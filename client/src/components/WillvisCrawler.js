@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import './WillvisCrawler.css';
+import HelpModal from './HelpModal';
 
 const WillvisCrawler = () => {
   const [posts, setPosts] = useState([]);
@@ -10,6 +11,7 @@ const WillvisCrawler = () => {
   const [showLoginForm, setShowLoginForm] = useState(false);
   const [naverId, setNaverId] = useState('');
   const [naverPassword, setNaverPassword] = useState('');
+  const [showHelp, setShowHelp] = useState(false);
 
   // 기본 설정
   const CAFE_URL = 'https://cafe.naver.com/m2school';
@@ -110,9 +112,21 @@ const WillvisCrawler = () => {
   return (
     <div className="willvis-crawler">
       <div className="header">
-        <h1>🎯 윌비스 게시글 분석</h1>
-        <p className="subtitle">독공사 카페 | 2025년 10월 ~ 12월</p>
+        <div className="header-content">
+          <h1>🎯 윌비스 게시글 분석</h1>
+          <p className="subtitle">독공사 카페 | 2025년 10월 ~ 12월</p>
+        </div>
+        <button
+          className="help-button-header"
+          onClick={() => setShowHelp(true)}
+          title="도움말"
+        >
+          ?
+        </button>
       </div>
+
+      {/* 도움말 모달 */}
+      <HelpModal isOpen={showHelp} onClose={() => setShowHelp(false)} />
 
       <div className="search-section">
         <div className="search-info">
