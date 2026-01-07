@@ -1,10 +1,12 @@
 node_modules/
+debug/
+.claude/
 .env
 .DS_Store
-client/build
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-debug/
-.claude/settings.local.json.bak
+package-lock.json
 client/nginx.conf
+client/package-lock.json
+client/build
