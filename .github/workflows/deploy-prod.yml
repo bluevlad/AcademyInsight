@@ -1,0 +1,97 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches:
+      - prod
+
+jobs:
+  deploy:
+    name: Build & Deploy
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build Docker images
+        run: docker compose build --no-cache
+
+      - name: Stop existing containers
+        run: docker compose down --timeout 30
+
+      - name: Start new containers
+        run: docker compose up -d
+
+      - name: Wait for containers to be ready
+        run: sleep 10
+
+      - name: Health check - Backend
+        run: |
+          for i in $(seq 1 12); do
+            if curl -sf http://localhost:8082/ > /dev/null 2>&1; then
+              echo "Backend health check passed"
+              exit 0
+            fi
+            echo "Attempt $i/12 - Backend not ready, waiting 5s..."
+            sleep 5
+          done
+          echo "Backend health check failed after 60s"
+          exit 1
+
+      - name: Health check - Frontend
+        run: |
+          for i in $(seq 1 12); do
+            if curl -sf http://localhost:4020/ > /dev/null 2>&1; then
+              echo "Frontend health check passed"
+              exit 0
+            fi
+            echo "Attempt $i/12 - Frontend not ready, waiting 5s..."
+            sleep 5
+          done
+          echo "Frontend health check failed after 60s"
+          exit 1
+
+      - name: Rollback on failure
+        if: failure()
+        run: |
+          echo "Deployment failed - rolling back to previous images..."
+          docker compose down --timeout 30
+          docker compose up -d
+          echo "Rollback completed"
+
+      - name: Notify Slack - Success
+        if: success()
+        run: |
+          curl -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
+            -H 'Content-Type: application/json' \
+            -d "{
+              \"text\": \"AcademyCafeHub 배포 성공\",
+              \"blocks\": [
+                {
+                  \"type\": \"section\",
+                  \"text\": {
+                    \"type\": \"mrkdwn\",
+                    \"text\": \":white_check_mark: *AcademyCafeHub 배포 성공*\n\n*Branch:* prod\n*Commit:* \`${GITHUB_SHA::7}\`\n*By:* ${{ github.actor }}\n*Workflow:* <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Run>\"
+                  }
+                }
+              ]
+            }"
+
+      - name: Notify Slack - Failure
+        if: failure()
+        run: |
+          curl -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
+            -H 'Content-Type: application/json' \
+            -d "{
+              \"text\": \"AcademyCafeHub 배포 실패\",
+              \"blocks\": [
+                {
+                  \"type\": \"section\",
+                  \"text\": {
+                    \"type\": \"mrkdwn\",
+                    \"text\": \":x: *AcademyCafeHub 배포 실패*\n\n*Branch:* prod\n*Commit:* \`${GITHUB_SHA::7}\`\n*By:* ${{ github.actor }}\n*Workflow:* <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Run>\n\n이전 버전으로 롤백되었습니다.\"
+                  }
+                }
+              ]
+            }"
