@@ -36,7 +36,7 @@ const Login = ({ setIsAuthenticated }) => {
   return (
     <div style={styles.container}>
       <div style={styles.formCard}>
-        <h2 style={styles.title}>Login to Academy Cafe Hub</h2>
+        <h2 style={styles.title}>Login to AcademyInsight</h2>
         {error && <div style={styles.error}>{error}</div>}
         <form onSubmit={onSubmit} style={styles.form}>
           <div style={styles.inputGroup}>

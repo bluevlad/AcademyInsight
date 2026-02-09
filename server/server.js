@@ -4,23 +4,33 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const authRoutes = require('./routes/auth');
 const crawlerRoutes = require('./routes/crawler');
+const academyRoutes = require('./routes/academy');
+const crawlSourceRoutes = require('./routes/crawlSource');
+const postRoutes = require('./routes/post');
+const seedRoutes = require('./routes/seed');
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 
-// MongoDB 연결 (선택적 - 크롤러 기능은 MongoDB 없이도 작동)
-if (process.env.MONGODB_URI) {
-  mongoose.connect(process.env.MONGODB_URI)
+// MongoDB 연결 (필수 - 크롤러 데이터 저장에 필요)
+const mongoUri = process.env.MONGODB_URI;
+if (mongoUri) {
+  mongoose.connect(mongoUri)
     .then(() => console.log('MongoDB connected successfully'))
-    .catch((err) => console.error('MongoDB connection error (크롤러는 정상 작동):', err));
+    .catch((err) => console.error('MongoDB connection error:', err));
 } else {
-  console.log('MongoDB URI not configured - Auth features disabled, Crawler works fine');
+  console.log('MongoDB URI not configured - Auth features disabled, Crawler works without DB persistence');
 }
 
+// 라우트 등록
 app.use('/api/auth', authRoutes);
 app.use('/api/crawler', crawlerRoutes);
+app.use('/api/academies', academyRoutes);
+app.use('/api/crawl-sources', crawlSourceRoutes);
+app.use('/api/posts', postRoutes);
+app.use('/api/seed', seedRoutes);
 
 app.get('/', (req, res) => {
   res.json({ message: 'Welcome to AcademyInsight API' });

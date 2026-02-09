@@ -15,7 +15,7 @@ const Dashboard = ({ setIsAuthenticated }) => {
   return (
     <div style={styles.container}>
       <div style={styles.card}>
-        <h1 style={styles.title}>Welcome to Academy Cafe Hub</h1>
+        <h1 style={styles.title}>Welcome to AcademyInsight</h1>
         <div style={styles.userInfo}>
           <h2 style={styles.greeting}>Hello, {user?.username}!</h2>
           <p style={styles.email}>{user?.email}</p>
