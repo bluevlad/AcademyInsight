@@ -9,11 +9,11 @@ services:
     environment:
       - PORT=8082
       - NODE_ENV=production
-      - MONGODB_URI=mongodb://admin:admin123@host.docker.internal:27017/academyinsight?authSource=admin
+      - MONGODB_URI=mongodb://mongo:27017/academyinsight
       - JWT_SECRET=academyinsight_jwt_secret_key_2024
       - JWT_EXPIRE=7d
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+    depends_on:
+      - mongo
     networks:
       - academyinsight-network
     restart: unless-stopped
@@ -25,10 +25,17 @@ services:
     container_name: academyinsight-frontend
     ports:
       - "4020:4020"
-    environment:
-      - PORT=4020
     depends_on:
       - backend
+    networks:
+      - academyinsight-network
+    restart: unless-stopped
+
+  mongo:
+    image: mongo:6
+    container_name: academyinsight-mongo
+    volumes:
+      - academyinsight-mongo-data:/data/db
     networks:
       - academyinsight-network
     restart: unless-stopped
@@ -36,3 +43,6 @@ services:
 networks:
   academyinsight-network:
     driver: bridge
+
+volumes:
+  academyinsight-mongo-data:
