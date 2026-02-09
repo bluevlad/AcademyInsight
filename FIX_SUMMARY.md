@@ -108,7 +108,7 @@ npm run server
 [Crawler] Navigating to cafe: https://cafe.naver.com/m2school
 [Crawler] Found cafe_main iframe, searching inside...
 [Crawler] Search submitted via iframe
-[Crawler] HTML saved to: C:\GIT\AcademyCafeHub\debug\naver_cafe_*.html
+[Crawler] HTML saved to: C:\GIT\AcademyInsight\debug\naver_cafe_*.html
 [Crawler] Found 50 elements with selector: .ArticleItem
 [Crawler] Detected mobile version, using mobile selectors...
 [Crawler] Collected 12 posts from mobile version

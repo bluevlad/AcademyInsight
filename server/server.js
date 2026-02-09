@@ -23,7 +23,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/crawler', crawlerRoutes);
 
 app.get('/', (req, res) => {
-  res.json({ message: 'Welcome to Academy Cafe Hub API' });
+  res.json({ message: 'Welcome to AcademyInsight API' });
 });
 
 const PORT = process.env.PORT || 5000;

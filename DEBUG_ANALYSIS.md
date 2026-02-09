@@ -114,7 +114,7 @@ devtools: true    // 개발자 도구 자동 열기
 5. **서버 로그 확인**:
    ```
    [Crawler] HTML length: XXXXX characters
-   [Crawler] HTML saved to: C:\GIT\AcademyCafeHub\debug\naver_cafe_1234567890.html
+   [Crawler] HTML saved to: C:\GIT\AcademyInsight\debug\naver_cafe_1234567890.html
    [Crawler] Found XX elements with selector: ...
    ```
 

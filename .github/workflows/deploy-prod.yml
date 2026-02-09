@@ -66,13 +66,13 @@ jobs:
           curl -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
             -H 'Content-Type: application/json' \
             -d "{
-              \"text\": \"AcademyCafeHub 배포 성공\",
+              \"text\": \"AcademyInsight 배포 성공\",
               \"blocks\": [
                 {
                   \"type\": \"section\",
                   \"text\": {
                     \"type\": \"mrkdwn\",
-                    \"text\": \":white_check_mark: *AcademyCafeHub 배포 성공*\n\n*Branch:* prod\n*Commit:* \`${GITHUB_SHA::7}\`\n*By:* ${{ github.actor }}\n*Workflow:* <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Run>\"
+                    \"text\": \":white_check_mark: *AcademyInsight 배포 성공*\n\n*Branch:* prod\n*Commit:* \`${GITHUB_SHA::7}\`\n*By:* ${{ github.actor }}\n*Workflow:* <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Run>\"
                   }
                 }
               ]
@@ -84,13 +84,13 @@ jobs:
           curl -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
             -H 'Content-Type: application/json' \
             -d "{
-              \"text\": \"AcademyCafeHub 배포 실패\",
+              \"text\": \"AcademyInsight 배포 실패\",
               \"blocks\": [
                 {
                   \"type\": \"section\",
                   \"text\": {
                     \"type\": \"mrkdwn\",
-                    \"text\": \":x: *AcademyCafeHub 배포 실패*\n\n*Branch:* prod\n*Commit:* \`${GITHUB_SHA::7}\`\n*By:* ${{ github.actor }}\n*Workflow:* <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Run>\n\n이전 버전으로 롤백되었습니다.\"
+                    \"text\": \":x: *AcademyInsight 배포 실패*\n\n*Branch:* prod\n*Commit:* \`${GITHUB_SHA::7}\`\n*By:* ${{ github.actor }}\n*Workflow:* <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Run>\n\n이전 버전으로 롤백되었습니다.\"
                   }
                 }
               ]

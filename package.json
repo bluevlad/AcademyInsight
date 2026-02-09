@@ -1,7 +1,7 @@
 {
-  "name": "academycafehub",
+  "name": "academyinsight",
   "version": "1.0.0",
-  "description": "Academy Cafe Hub with authentication",
+  "description": "Academy Insight with authentication",
   "main": "server/server.js",
   "scripts": {
     "start": "node server/server.js",

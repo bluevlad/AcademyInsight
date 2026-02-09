@@ -156,7 +156,7 @@ curl "http://localhost:5000/api/crawler/naver-cafe/search?cafeUrl=https://cafe.n
 ## 파일 구조
 
 ```
-AcademyCafeHub/
+AcademyInsight/
 ├── server/
 │   ├── services/
 │   │   └── naverCafeCrawler.js    # 날짜 필터링 기능 추가됨

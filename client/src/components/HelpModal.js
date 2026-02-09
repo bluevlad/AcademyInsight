@@ -18,7 +18,7 @@ const HelpModal = ({ isOpen, onClose }) => {
         </button>
 
         <div className="help-modal-header">
-          <h2>AcademyCafeHub 사용 가이드</h2>
+          <h2>AcademyInsight 사용 가이드</h2>
           <p className="help-subtitle">학원 강사를 위한 온라인 평판 모니터링 시스템</p>
         </div>
 
@@ -27,7 +27,7 @@ const HelpModal = ({ isOpen, onClose }) => {
           <section className="help-section">
             <h3>서비스 소개</h3>
             <p>
-              AcademyCafeHub는 네이버 카페 등 주요 커뮤니티에서 특정 키워드(강사명, 학원명 등)가
+              AcademyInsight는 네이버 카페 등 주요 커뮤니티에서 특정 키워드(강사명, 학원명 등)가
               포함된 게시글을 자동으로 수집하고 분석하여 여론 현황을 파악할 수 있는 서비스입니다.
             </p>
           </section>

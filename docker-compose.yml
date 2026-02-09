@@ -1,50 +1,38 @@
-version: '3.8'
-
 services:
   backend:
     build:
       context: .
       dockerfile: server/Dockerfile
-    container_name: academycafehub-backend
+    container_name: academyinsight-backend
     ports:
       - "8082:8082"
     environment:
       - PORT=8082
       - NODE_ENV=production
-      - MONGODB_URI=mongodb://mongo:27017/academycafehub
-      - JWT_SECRET=your_jwt_secret_key_change_this_in_production
+      - MONGODB_URI=mongodb://admin:admin123@host.docker.internal:27017/academyinsight?authSource=admin
+      - JWT_SECRET=academyinsight_jwt_secret_key_2024
       - JWT_EXPIRE=7d
-    depends_on:
-      - mongo
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
-      - academycafehub-network
+      - academyinsight-network
     restart: unless-stopped
 
   frontend:
     build:
       context: ./client
       dockerfile: Dockerfile
-    container_name: academycafehub-frontend
+    container_name: academyinsight-frontend
     ports:
-      - "3002:3000"
+      - "4020:4020"
+    environment:
+      - PORT=4020
     depends_on:
       - backend
     networks:
-      - academycafehub-network
-    restart: unless-stopped
-
-  mongo:
-    image: mongo:6
-    container_name: academycafehub-mongo
-    volumes:
-      - academycafehub-mongo-data:/data/db
-    networks:
-      - academycafehub-network
+      - academyinsight-network
     restart: unless-stopped
 
 networks:
-  academycafehub-network:
+  academyinsight-network:
     driver: bridge
-
-volumes:
-  academycafehub-mongo-data:

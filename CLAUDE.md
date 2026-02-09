@@ -1,7 +1,7 @@
-# AcademyCafeHub - 개발 가이드
+# AcademyInsight - 개발 가이드
 
 ## 프로젝트 개요
-AcademyCafeHub는 학원 강사들을 위한 온라인 평판 모니터링 시스템입니다. 주요 커뮤니티(네이버/다음 카페, 디시인사이드 등)에서 키워드 기반으로 게시글을 수집하고, AI 감성 분석을 통해 긍정/부정 여론을 파악하여 대시보드로 제공합니다.
+AcademyInsight는 학원 강사들을 위한 온라인 평판 모니터링 시스템입니다. 주요 커뮤니티(네이버/다음 카페, 디시인사이드 등)에서 키워드 기반으로 게시글을 수집하고, AI 감성 분석을 통해 긍정/부정 여론을 파악하여 대시보드로 제공합니다.
 
 ## 시스템 아키텍처
 
@@ -291,7 +291,7 @@ async def get_trends(
 from celery import Celery
 from datetime import datetime
 
-celery_app = Celery('academycafehub', broker='redis://localhost:6379/0')
+celery_app = Celery('academyinsight', broker='redis://localhost:6379/0')
 
 @celery_app.task
 def crawl_all_sources():
@@ -346,7 +346,7 @@ celery_app.conf.beat_schedule = {
 
 ### 1. 프로젝트 구조
 ```
-AcademyCafeHub/
+AcademyInsight/
 ├── backend/
 │   ├── api/              # FastAPI 애플리케이션
 │   ├── crawler/          # 크롤러 모듈
@@ -376,7 +376,7 @@ services:
   postgres:
     image: postgres:15
     environment:
-      POSTGRES_DB: academycafehub
+      POSTGRES_DB: academyinsight
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: password
     volumes:
@@ -400,7 +400,7 @@ services:
       - postgres
       - redis
     environment:
-      DATABASE_URL: postgresql://admin:password@postgres:5432/academycafehub
+      DATABASE_URL: postgresql://admin:password@postgres:5432/academyinsight
       REDIS_URL: redis://redis:6379/0
 
   celery_worker:
@@ -440,7 +440,7 @@ volumes:
 ```bash
 # 1. 저장소 클론
 git clone <repository-url>
-cd AcademyCafeHub
+cd AcademyInsight
 
 # 2. 환경 변수 설정
 cp .env.example .env
@@ -601,7 +601,7 @@ gradlew bootRun
 
 #### Frontend (React/Node.js)
 ```powershell
-cd C:\GIT\AcademyCafeHub
+cd C:\GIT\AcademyInsight
 npm install
 npm run dev
 ```
