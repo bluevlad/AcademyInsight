@@ -1,272 +1,329 @@
-const BaseCrawler = require('./BaseCrawler');
+const axios = require('axios');
 const cheerio = require('cheerio');
 
-class DaumCafeCrawler extends BaseCrawler {
+class DaumCafeCrawler {
+  /**
+   * @param {string} cafeUrl - 카페 URL (예: https://cafe.daum.net/gongdream)
+   * @param {object} options - { kakaoApiKey } 카카오 REST API 키 (선택)
+   */
   constructor(cafeUrl, options = {}) {
-    super(options);
     this.cafeUrl = cafeUrl;
     this.cafeId = this.extractCafeId(cafeUrl);
+    this.kakaoApiKey = options.kakaoApiKey || process.env.KAKAO_REST_API_KEY;
   }
 
+  /**
+   * 카페 ID 추출 (URL에서)
+   */
   extractCafeId(url) {
+    if (!url) return '';
     const match = url.match(/cafe\.daum\.net\/([^/?]+)/);
     return match ? match[1] : '';
   }
 
   /**
    * 키워드로 게시글 검색
+   * 1순위: 모바일 카페 내부 검색 (HTTP)
+   * 2순위: Kakao Search API (API 키가 있을 때만)
+   * 모두 실패 시 빈 배열 반환
    */
-  async searchPosts(keyword, maxResults = 10, options = {}) {
+  async searchPosts(keyword, maxResults = 20, options = {}) {
     try {
-      if (!this.browser) {
-        await this.initBrowser();
-      }
+      console.log(`[DaumCafeCrawler] Searching for keyword: "${keyword}" in ${this.cafeUrl}`);
 
-      console.log(`[DaumCafeCrawler] Searching for keyword: ${keyword} in ${this.cafeUrl}`);
-
-      // 방법 1: 모바일 다음카페 검색
-      let posts = await this.searchPostsMobile(keyword, maxResults, options);
+      // 방법 1: 모바일 카페 내부 검색 (HTTP GET + cheerio)
+      let posts = await this.searchPostsHttp(keyword, maxResults, options);
       if (posts.length > 0) {
-        console.log(`[DaumCafeCrawler] Found ${posts.length} posts via mobile search`);
+        console.log(`[DaumCafeCrawler] Found ${posts.length} posts via mobile HTTP search`);
         return posts;
       }
 
-      // 방법 2: 다음 통합 검색
-      console.log('[DaumCafeCrawler] Mobile search failed, trying Daum search...');
-      posts = await this.searchPostsDaumSearch(keyword, maxResults, options);
-      if (posts.length > 0) {
-        console.log(`[DaumCafeCrawler] Found ${posts.length} posts via Daum search`);
-        return posts;
+      // 방법 2: Kakao Search API (API 키가 있을 때만)
+      if (this.kakaoApiKey) {
+        console.log('[DaumCafeCrawler] HTTP search returned 0, trying Kakao API...');
+        posts = await this.searchPostsKakaoApi(keyword, maxResults, options);
+        if (posts.length > 0) {
+          console.log(`[DaumCafeCrawler] Found ${posts.length} posts via Kakao API`);
+          return posts;
+        }
       }
 
-      // 방법 3: 샘플 데이터
-      console.log('[DaumCafeCrawler] All methods failed, generating sample data...');
-      return this.generateSampleData(keyword, maxResults, options);
+      console.log('[DaumCafeCrawler] All methods returned 0 results');
+      return [];
 
     } catch (error) {
-      console.error('[DaumCafeCrawler] Error during crawling:', error);
-      return this.generateSampleData(keyword, maxResults, options);
+      console.error('[DaumCafeCrawler] Error during crawling:', error.message);
+      return [];
     }
   }
 
   /**
-   * 모바일 다음카페 검색
+   * 방법 1: 모바일 카페 내부 검색 (HTTP GET + cheerio)
+   * URL: https://m.cafe.daum.net/{cafeId}/search/all?query={keyword}&sort=0&page={page}
    */
-  async searchPostsMobile(keyword, maxResults, options) {
+  async searchPostsHttp(keyword, maxResults, options) {
+    const posts = [];
+    const maxPages = 5;
+
     try {
-      await this.page.setUserAgent(
-        'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1'
-      );
-      await this.page.setViewport({ width: 375, height: 812, isMobile: true });
+      for (let page = 1; page <= maxPages; page++) {
+        if (posts.length >= maxResults) break;
 
-      const searchUrl = `https://m.cafe.daum.net/${this.cafeId}/_search?query=${encodeURIComponent(keyword)}`;
-      console.log(`[DaumCafeCrawler] Navigating to: ${searchUrl}`);
+        const url = `https://m.cafe.daum.net/${this.cafeId}/search/all?query=${encodeURIComponent(keyword)}&sort=0&page=${page}`;
+        console.log(`[DaumCafeCrawler] HTTP GET: ${url}`);
 
-      await this.page.goto(searchUrl, { waitUntil: 'networkidle2', timeout: 30000 });
-      await this.randomDelay(2000, 4000);
-      await this.autoScroll();
+        const response = await axios.get(url, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7'
+          },
+          timeout: 15000
+        });
 
-      const content = await this.page.content();
-      const $ = cheerio.load(content);
-      this.saveDebugHtml(content, 'daum_mobile');
+        const $ = cheerio.load(response.data);
+        const items = $('#slideArticleList li');
 
-      const posts = [];
-      const selectors = [
-        '.article_list li',
-        '.search_list li',
-        '[class*="article"] a',
-        '.tit_article'
-      ];
+        if (items.length === 0) {
+          console.log(`[DaumCafeCrawler] Page ${page}: no results, stopping pagination`);
+          break;
+        }
 
-      for (const selector of selectors) {
-        $(selector).each((index, element) => {
+        items.each((index, element) => {
           if (posts.length >= maxResults) return false;
+
           const $el = $(element);
+          const linkEl = $el.find('a.link_cafe').first();
+          const href = linkEl.attr('href') || '';
+          const title = $el.find('.tit_info').text().trim();
+          const description = $el.find('.desc_info').text().trim();
+          const author = $el.find('.username').text().trim() || '알 수 없음';
+          const dateStr = $el.find('.created_at').text().trim();
+          const viewCountStr = $el.find('.view_count').text().trim();
+          const commentCountStr = $el.find('.comments').text().trim();
 
-          const titleEl = $el.find('a.tit, .tit_article, a[class*="title"]').first();
-          const title = (titleEl.text().trim() || $el.find('a').first().text().trim());
-          const url = titleEl.attr('href') || $el.find('a').first().attr('href');
-          const author = $el.find('.info_writer, .nickname, [class*="writer"]').text().trim() || '알 수 없음';
-          const date = $el.find('.info_date, .date, [class*="date"]').text().trim();
-          const viewCount = $el.find('.info_view, [class*="view"]').text().trim();
-          const commentCount = $el.find('.info_comment, [class*="comment"], .num_reply').text().trim();
-
-          if (title && title.length > 2) {
-            const postDate = this.parseDate(date);
+          if (title && title.length > 1) {
+            const postDate = this.parseDate(dateStr);
             if (this.isWithinDateRange(postDate, options.startDate, options.endDate)) {
-              const fullUrl = url ? (url.startsWith('http') ? url : `https://m.cafe.daum.net${url}`) : '';
+              const fullUrl = href.startsWith('http') ? href : (href ? `https://m.cafe.daum.net${href}` : '');
               posts.push({
                 title,
                 url: fullUrl,
                 author,
-                postedAt: date,
+                content: description,
+                postedAt: dateStr,
                 postedAtDate: postDate,
-                viewCount: this.parseNumber(viewCount),
-                commentCount: this.parseNumber(commentCount),
+                viewCount: this.parseNumber(viewCountStr),
+                commentCount: this.parseNumber(commentCountStr),
                 keyword,
                 source: 'daum_cafe',
                 cafeUrl: this.cafeUrl,
-                collectedAt: new Date().toISOString()
+                collectedAt: new Date().toISOString(),
+                isSample: false
               });
             }
           }
         });
-        if (posts.length > 0) break;
+
+        console.log(`[DaumCafeCrawler] Page ${page}: parsed ${items.length} items, total ${posts.length} posts`);
+
+        // 요청 간 딜레이 (1~2초)
+        if (page < maxPages && posts.length < maxResults) {
+          await this.delay(1000 + Math.random() * 1000);
+        }
       }
-
-      // PC User-Agent 복원
-      await this.page.setUserAgent(
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-      );
-      await this.page.setViewport({ width: 1920, height: 1080 });
-
-      return posts;
-
     } catch (error) {
-      console.error('[DaumCafeCrawler] Mobile search error:', error.message);
-      return [];
+      console.error('[DaumCafeCrawler] HTTP search error:', error.message);
     }
+
+    return posts;
   }
 
   /**
-   * 다음 통합검색 사용
+   * 방법 2: Kakao Search API
+   * URL: GET https://dapi.kakao.com/v2/search/cafe?query={keyword}&sort=recency&page={page}&size=50
    */
-  async searchPostsDaumSearch(keyword, maxResults, options) {
+  async searchPostsKakaoApi(keyword, maxResults, options) {
+    const posts = [];
+    const maxPages = 5;
+    const pageSize = Math.min(50, maxResults);
+
     try {
-      const searchQuery = `${keyword} site:cafe.daum.net/${this.cafeId}`;
-      const searchUrl = `https://search.daum.net/search?w=cafe&q=${encodeURIComponent(searchQuery)}`;
+      for (let page = 1; page <= maxPages; page++) {
+        if (posts.length >= maxResults) break;
 
-      await this.page.goto(searchUrl, { waitUntil: 'networkidle2', timeout: 30000 });
-      await this.randomDelay(2000, 4000);
+        const response = await axios.get('https://dapi.kakao.com/v2/search/cafe', {
+          params: {
+            query: keyword,
+            sort: 'recency',
+            page,
+            size: pageSize
+          },
+          headers: {
+            'Authorization': `KakaoAK ${this.kakaoApiKey}`
+          },
+          timeout: 10000
+        });
 
-      const content = await this.page.content();
-      const $ = cheerio.load(content);
-      this.saveDebugHtml(content, 'daum_search');
+        const documents = response.data.documents;
+        if (!documents || documents.length === 0) break;
 
-      const posts = [];
+        for (const doc of documents) {
+          if (posts.length >= maxResults) break;
 
-      $('a.f_link_b, .wrap_tit a, .tit_info a').each((index, element) => {
-        if (posts.length >= maxResults) return false;
+          // 카페 ID 필터링: cafeId가 있으면 해당 카페 게시글만 수집
+          if (this.cafeId && doc.url) {
+            if (!doc.url.includes('cafe.daum.net') && !doc.url.includes(this.cafeId)) {
+              continue;
+            }
+          }
 
-        const $el = $(element);
-        const title = $el.text().trim();
-        const url = $el.attr('href');
+          const title = this.stripHtml(doc.title);
+          const content = this.stripHtml(doc.contents);
+          const postDate = doc.datetime ? new Date(doc.datetime) : null;
 
-        if (title && title.length > 3 && url && url.includes('cafe.daum.net')) {
-          if (!posts.find(p => p.title === title)) {
+          if (this.isWithinDateRange(postDate, options.startDate, options.endDate)) {
             posts.push({
               title,
-              url,
+              url: doc.url || '',
               author: '알 수 없음',
-              postedAt: '',
-              postedAtDate: null,
+              content,
+              postedAt: postDate ? postDate.toISOString().split('T')[0] : '',
+              postedAtDate: postDate,
               viewCount: 0,
               commentCount: 0,
               keyword,
               source: 'daum_cafe',
-              cafeUrl: this.cafeUrl,
-              collectedAt: new Date().toISOString()
+              cafeUrl: doc.cafename || this.cafeUrl,
+              collectedAt: new Date().toISOString(),
+              isSample: false
             });
           }
         }
-      });
 
-      return posts;
+        // 마지막 페이지 확인
+        if (response.data.meta && response.data.meta.is_end) break;
+        if (documents.length < pageSize) break;
 
+        await this.delay(100);
+      }
     } catch (error) {
-      console.error('[DaumCafeCrawler] Daum search error:', error.message);
-      return [];
-    }
-  }
-
-  /**
-   * 게시글 상세 정보 가져오기
-   */
-  async getPostDetail(articleUrl) {
-    try {
-      if (!this.browser) {
-        await this.initBrowser();
+      if (error.response) {
+        console.error(`[DaumCafeCrawler] Kakao API error: ${error.response.status} - ${JSON.stringify(error.response.data)}`);
+      } else {
+        console.error(`[DaumCafeCrawler] Kakao API error: ${error.message}`);
       }
-
-      console.log(`[DaumCafeCrawler] Fetching post detail: ${articleUrl}`);
-
-      await this.page.goto(articleUrl, { waitUntil: 'networkidle2', timeout: 30000 });
-      await this.randomDelay(2000, 4000);
-
-      const content = await this.page.content();
-      const $ = cheerio.load(content);
-
-      const title = $('.tit_subject, .article_title, h3.tit').text().trim();
-      const author = $('.info_writer .txt_sub, .nickname').text().trim();
-      const postDate = $('.info_date, .date').text().trim();
-      const articleContent = $('.article_view, .contents_article, #article').html() || '';
-      const viewCountStr = $('.info_view .num_count, .count_view').text().trim();
-
-      const comments = [];
-      $('.comment_list li, .list_comment li').each((index, element) => {
-        const $comment = $(element);
-        comments.push({
-          author: $comment.find('.txt_sub, .nickname').text().trim(),
-          content: $comment.find('.txt_comment, .desc').text().trim(),
-          commentedAt: $comment.find('.date, .time').text().trim()
-        });
-      });
-
-      return { title, author, postedAt: postDate, content: articleContent, viewCount: this.parseNumber(viewCountStr), comments, url: articleUrl };
-
-    } catch (error) {
-      console.error('[DaumCafeCrawler] Error fetching post detail:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * 샘플 데이터 생성
-   */
-  generateSampleData(keyword, maxResults, options) {
-    console.log('[DaumCafeCrawler] Generating sample data as fallback...');
-    const posts = [];
-    const now = new Date();
-
-    for (let i = 0; i < Math.min(maxResults, 10); i++) {
-      const randomDays = Math.floor(Math.random() * 90);
-      const postDate = new Date(now);
-      postDate.setDate(postDate.getDate() - randomDays);
-
-      if (options.startDate) {
-        const startDate = new Date(options.startDate);
-        if (postDate < startDate) {
-          postDate.setTime(startDate.getTime() + Math.random() * (now.getTime() - startDate.getTime()));
-        }
-      }
-      if (options.endDate) {
-        const endDate = new Date(options.endDate);
-        if (postDate > endDate) {
-          const start = options.startDate ? new Date(options.startDate) : new Date(endDate.getTime() - 90 * 24 * 60 * 60 * 1000);
-          postDate.setTime(start.getTime() + Math.random() * (endDate.getTime() - start.getTime()));
-        }
-      }
-
-      const dateStr = `${postDate.getFullYear()}.${(postDate.getMonth() + 1).toString().padStart(2, '0')}.${postDate.getDate().toString().padStart(2, '0')}`;
-
-      posts.push({
-        title: `[샘플] ${keyword} 관련 다음카페 게시글 ${i + 1}`,
-        url: `${this.cafeUrl}/sample${i + 1}`,
-        author: '테스트사용자',
-        postedAt: dateStr,
-        postedAtDate: postDate,
-        viewCount: Math.floor(Math.random() * 300) + 30,
-        commentCount: Math.floor(Math.random() * 15),
-        keyword,
-        source: 'daum_cafe',
-        cafeUrl: this.cafeUrl,
-        collectedAt: new Date().toISOString(),
-        isSample: true
-      });
     }
 
-    console.log(`[DaumCafeCrawler] Generated ${posts.length} sample posts`);
     return posts;
+  }
+
+  /**
+   * HTML 태그 제거
+   */
+  stripHtml(str) {
+    if (!str) return '';
+    return str.replace(/<[^>]*>/g, '');
+  }
+
+  /**
+   * 숫자 파싱
+   */
+  parseNumber(str) {
+    if (!str) return 0;
+    const cleaned = str.replace(/[^0-9]/g, '');
+    return cleaned ? parseInt(cleaned, 10) : 0;
+  }
+
+  /**
+   * 날짜 파싱 (한국어 날짜 형식 지원)
+   */
+  parseDate(dateStr) {
+    if (!dateStr) return null;
+
+    const today = new Date();
+    const currentYear = today.getFullYear();
+
+    // "2025.10.15" 형식 (4자리 연도)
+    const fullDateMatch = dateStr.match(/(\d{4})[\.\-\/](\d{1,2})[\.\-\/](\d{1,2})/);
+    if (fullDateMatch) {
+      const [, year, month, day] = fullDateMatch;
+      return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    }
+
+    // "26.02.09" 형식 (2자리 연도)
+    const shortYearMatch = dateStr.match(/(\d{2})[\.\-\/](\d{1,2})[\.\-\/](\d{1,2})/);
+    if (shortYearMatch) {
+      const [, shortYear, month, day] = shortYearMatch;
+      return new Date(2000 + parseInt(shortYear), parseInt(month) - 1, parseInt(day));
+    }
+
+    // "10.15" 또는 "10.15." 형식 (올해)
+    const shortDateMatch = dateStr.match(/^(\d{1,2})\.(\d{1,2})\.?$/);
+    if (shortDateMatch) {
+      const [, month, day] = shortDateMatch;
+      return new Date(currentYear, parseInt(month) - 1, parseInt(day));
+    }
+
+    // "어제"
+    if (dateStr.includes('어제')) {
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+      return yesterday;
+    }
+
+    // "N시간 전"
+    const hoursMatch = dateStr.match(/(\d+)\s*시간\s*전/);
+    if (hoursMatch) {
+      const date = new Date(today);
+      date.setHours(date.getHours() - parseInt(hoursMatch[1]));
+      return date;
+    }
+
+    // "N분 전"
+    const minutesMatch = dateStr.match(/(\d+)\s*분\s*전/);
+    if (minutesMatch) {
+      const date = new Date(today);
+      date.setMinutes(date.getMinutes() - parseInt(minutesMatch[1]));
+      return date;
+    }
+
+    // "N일 전"
+    const daysMatch = dateStr.match(/(\d+)\s*일\s*전/);
+    if (daysMatch) {
+      const date = new Date(today);
+      date.setDate(date.getDate() - parseInt(daysMatch[1]));
+      return date;
+    }
+
+    return null;
+  }
+
+  /**
+   * 날짜 범위 체크
+   */
+  isWithinDateRange(postDate, startDate, endDate) {
+    if (!startDate && !endDate) return true;
+    if (!postDate) return true;
+
+    const date = new Date(postDate);
+    if (startDate && date < new Date(startDate)) return false;
+    if (endDate && date > new Date(endDate)) return false;
+    return true;
+  }
+
+  /**
+   * close() - HTTP 기반이므로 정리할 리소스 없음 (인터페이스 호환용)
+   */
+  async close() {
+    // No browser to close - HTTP based crawler
+  }
+
+  /**
+   * 딜레이
+   */
+  delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 }
 

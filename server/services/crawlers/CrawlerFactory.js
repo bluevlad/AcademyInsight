@@ -19,7 +19,10 @@ class CrawlerFactory {
         });
 
       case 'daum_cafe':
-        return new DaumCafeCrawler(sourceUrl, options);
+        return new DaumCafeCrawler(sourceUrl, {
+          kakaoApiKey: process.env.KAKAO_REST_API_KEY,
+          ...options
+        });
 
       case 'dcinside':
         return new DCInsideCrawler(sourceUrl, options);
