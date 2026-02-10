@@ -22,9 +22,7 @@ class CrawlerManager {
     try {
       console.log(`[CrawlerManager] Starting job ${job._id}: ${crawlSource.name} / ${keyword}`);
 
-      crawler = CrawlerFactory.create(crawlSource.sourceType, crawlSource.url, {
-        credentials: options.credentials
-      });
+      crawler = CrawlerFactory.create(crawlSource.sourceType, crawlSource.url);
 
       const posts = await crawler.searchPosts(keyword, options.maxResults || 20, {
         startDate: options.startDate,
@@ -64,8 +62,12 @@ class CrawlerManager {
       await job.save();
       return job;
     } finally {
-      if (crawler) {
-        await crawler.close();
+      if (crawler && typeof crawler.close === 'function') {
+        try {
+          await crawler.close();
+        } catch (closeError) {
+          console.error(`[CrawlerManager] Error closing crawler:`, closeError.message);
+        }
       }
     }
   }

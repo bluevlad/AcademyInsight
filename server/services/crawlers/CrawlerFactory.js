@@ -13,7 +13,10 @@ class CrawlerFactory {
   static create(sourceType, sourceUrl, options = {}) {
     switch (sourceType) {
       case 'naver_cafe':
-        return new NaverCafeCrawler(sourceUrl, options.credentials || null);
+        return new NaverCafeCrawler(sourceUrl, {
+          clientId: process.env.NAVER_CLIENT_ID,
+          clientSecret: process.env.NAVER_CLIENT_SECRET
+        });
 
       case 'daum_cafe':
         return new DaumCafeCrawler(sourceUrl, options);
