@@ -32,10 +32,10 @@ function App() {
               <Dashboard setIsAuthenticated={setIsAuthenticated} />
             </PrivateRoute>
           } />
-          <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/" element={<AdminDashboard />} />
+          <Route path="/admin" element={<Navigate to="/" />} />
           <Route path="/academy/:id" element={<AcademyDetail />} />
           <Route path="/crawl-status" element={<CrawlStatus />} />
-          <Route path="/" element={<Navigate to="/admin" />} />
         </Routes>
       </div>
     </Router>
