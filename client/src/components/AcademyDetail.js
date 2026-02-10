@@ -13,7 +13,7 @@ const AcademyDetail = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [error, setError] = useState(null);
 
-  const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+  const apiUrl = '';
 
   useEffect(() => {
     fetchAcademy();

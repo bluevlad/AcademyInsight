@@ -12,10 +12,6 @@ RUN npm install
 COPY public/ ./public/
 COPY src/ ./src/
 
-# Set API URL for production build
-ARG REACT_APP_API_URL=http://insight.unmong.com
-ENV REACT_APP_API_URL=$REACT_APP_API_URL
-
 # Build the application
 RUN npm run build
 
