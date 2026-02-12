@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-AcademyInsight - 학원 강사 온라인 평판 모니터링 시스템 (크롤링 → AI 감성 분석 → 대시보드)
+AcademyInsight - 공무원 학원 강사 평판 분석 시스템 (네이버카페/다음카페/디시인사이드 크롤링 → 감성 분석 → 대시보드/랭킹)
 
 ## Environment
 
@@ -33,8 +33,10 @@ AcademyInsight - 학원 강사 온라인 평판 모니터링 시스템 (크롤�
 
 | 항목 | 기술 |
 |------|------|
-| Framework | React (CRA) |
+| Framework | React 18 (CRA) |
+| Router | React Router 6 |
 | HTTP Client | Axios |
+| Proxy | http://localhost:5000 (개발 모드 API 연동) |
 
 ## Setup and Run Commands
 
@@ -73,13 +75,27 @@ git push origin main:prod
 server/
 ├── server.js          # Express 엔트리포인트
 ├── routes/            # API 라우트
-├── services/          # 비즈니스 로직 (크롤러, 분석)
-├── models/            # Mongoose 스키마
-├── middleware/         # 인증 등 미들웨어
-└── scripts/           # 유틸리티 스크립트
+│   ├── auth.js        # /api/auth (register, login, me)
+│   ├── crawler.js     # /api/crawler (크롤링 실행)
+│   ├── academy.js     # /api/academies (학원 관리)
+│   ├── crawlSource.js # /api/crawl-sources (소스 관리)
+│   ├── post.js        # /api/posts (게시글 조회)
+│   ├── dashboard.js   # /api/dashboard (통계/랭킹)
+│   └── seed.js        # /api/seed (초기 데이터)
+├── services/
+│   ├── CrawlerManager.js  # 크롤링 작업 관리자
+│   └── crawlers/          # 크롤러 구현체
+│       ├── BaseCrawler.js
+│       ├── CrawlerFactory.js
+│       ├── NaverCafeCrawler.js    # Naver Search API
+│       ├── DaumCafeCrawler.js     # Kakao API fallback
+│       └── DCInsideCrawler.js     # 디시인사이드
+├── models/            # Mongoose 스키마 (User, Academy, Post, CrawlSource, CrawlJob, Comment)
+├── middleware/        # JWT 인증 미들웨어
+└── scripts/
 
 client/
-└── src/               # React 애플리케이션
+└── src/               # React 애플리케이션 (Login, Dashboard, AcademyDetail, CrawlStatus)
 ```
 
 ### 브랜치 전략
@@ -112,6 +128,7 @@ NAVER_CLIENT_ID=        # 네이버 API
 NAVER_CLIENT_SECRET=
 CRAWL_ENABLED=true      # 크롤러 활성화
 CRAWL_SCHEDULE=0 4 * * *  # 크론 스케줄 (매일 4시)
+KAKAO_REST_API_KEY=     # 카카오 API (다음카페 fallback)
 ```
 
 ## Deployment
