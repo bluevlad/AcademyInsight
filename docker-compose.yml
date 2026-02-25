@@ -16,6 +16,7 @@ services:
       - CORS_ALLOWED_ORIGINS=http://localhost:3000,http://localhost:4020,http://insight.unmong.com
       - CRAWL_ENABLED=false
       - CRAWL_SCHEDULE=0 4 * * *
+      - TEACHERHUB_API_URL=http://host.docker.internal:9010
       - NAVER_CLIENT_ID=${NAVER_CLIENT_ID}
       - NAVER_CLIENT_SECRET=${NAVER_CLIENT_SECRET}
     depends_on:
